@@ -1,0 +1,547 @@
+---
+title: "CAPSTONE"
+author: "AJITH RAJ PERIYASAMY, SAMUEL JAMES GUDISE, TEJASVIN MADDINENI"
+date: "2024-05-30"
+output: html_document
+---
+
+
+#### PROJECT SUMMARY:
+
+
+With the chosen dataset, I aim to find out  if a bank customer’s loan would be approved or not. For this purpose, I will use classification algorithms (K-NN & Naive Bayes) and compare the results from both analyses and make an interpretation as to which one is accurate and suitable for this dataset.
+
+***
+
+DETAILS:
+
+A) Number of rows - The dataset has 614 values of Rows.
+B) How many columns - The dataset has 13 columns.
+C) Target Variable - The target variable is Loan Status
+D) How many categorical variables and how many numerical ones are among your features. - There are 7 categorical and 6 numerical variables in the dataset.
+
+***
+
+```{r}
+# LOADING THE DATASET:
+Training_dataset <- read.csv("/Users/ajithrajperiyasamy/Desktop/FILES/KSU FILES/CAPSTONE/BANK LOAN/CODING/Training dataset.csv")
+Testing_dataset <- read.csv("/Users/ajithrajperiyasamy/Desktop/FILES/KSU FILES/CAPSTONE/BANK LOAN/CODING/Testing dataset.csv")
+head(Training_dataset) #Displays the first 6 values of each columns 
+str(Training_dataset) #Displays the structure of the dataset.
+```
+***
+
+```{r}
+# Missing Value:
+total_missing <- sum(is.na(Training_dataset))
+total_missing
+
+total_cells <- nrow(Training_dataset)*ncol(Training_dataset)
+total_cells
+
+percent_missing <- (total_missing/total_cells)*100
+percent_missing
+
+print(paste("Percentage of missing values in the dataset:",percent_missing,"%")) # Since the percentage of missing values is just 1%, we dont need to impute the missing values, rather we can omit them, because they would not affect our results.
+
+training_dataset <- na.omit(Training_dataset)
+```
+
+***
+
+##### Performing Descreptive statistics to better understand the dataset.
+
+```{r}
+# DESCRIPTIVE AND BASIC STATISTICS:
+# 1.Summary Statistics:
+summary(Training_dataset) # Summary gives us an idea about the mean, median, maximum and minimum value of all the variables belonging to the dataset.
+```
+
+***
+
+```{r}
+# 2. Scatter plot:
+library(dplyr)
+
+# Identify numeric columns
+numeric_vars <- Training_dataset %>%
+  select_if(is.numeric) %>%
+  names()
+numeric_vars
+library(ggplot2)
+
+# Pairwise scatter plots for numeric variables
+for (i in 1:(length(numeric_vars)-1)) {
+  for (j in (i+1):length(numeric_vars)) {
+    p <- ggplot(Training_dataset, aes_string(x = numeric_vars[i], y = numeric_vars[j], color = "Loan_Status")) +
+      geom_point(alpha = 0.6) +
+      labs(title = paste(numeric_vars[i], "vs", numeric_vars[j]),
+           x = numeric_vars[i], y = numeric_vars[j]) +
+      theme_minimal()
+    print(p)
+  }
+}
+```
+
+***
+
+```{r}
+# 3. BARPLOT:
+barplot <- barplot(table(Training_dataset$Loan_Status), 
+        main = "Loan Status",
+        xlab = "Decision",
+        ylab = "Frequency")
+```
+
+***
+
+```{r}
+# 4. BOXPLOT:
+# Box plot for Applicant Income vs Loan Status
+ggplot(training_dataset, aes(x = Loan_Status, y = ApplicantIncome)) +
+  geom_boxplot() +
+  labs(title = "Box Plot of Applicant Income by Loan Status", x = "Loan Status", y = "ApplicantIncome")
+
+# Box plot for Co Applicant Income vs Loan Status
+ggplot(training_dataset, aes(x = Loan_Status, y = CoapplicantIncome)) +
+  geom_boxplot() +
+  labs(title = "Box Plot of Coapplicant Income by Loan Status", x = "Loan Status", y = "CoapplicantIncome")
+
+# Box plot for Loan Amount vs Loan Status
+ggplot(training_dataset, aes(x = Loan_Status, y = LoanAmount)) +
+  geom_boxplot() +
+  labs(title = "Box Plot of Loan Amount by Loan Status", x = "Loan Status", y = "LoanAmount")
+```
+
+***
+
+```{r}
+# 5. HISTOGRAM:
+library(ggplot2)
+
+# Age distribution
+ggplot(training_dataset, aes(x = ApplicantIncome)) + 
+  geom_histogram(binwidth = 1000, fill="lightblue", color="black") + 
+  labs(title="Applicant Income Distribution", x="ApplicantIncome", y="Count")
+
+# Income distribution
+ggplot(training_dataset, aes(x = CoapplicantIncome)) + 
+  geom_histogram(binwidth = 1000, fill="lightgreen", color="black") + 
+  labs(title="Co-applicant Income Distribution", x="CoapplicantIncome", y="Count")
+
+# Loan amount distribution
+ggplot(training_dataset, aes(x = LoanAmount)) + 
+  geom_histogram(binwidth = 500, fill="lightcoral", color="black") + 
+  labs(title="Loan Amount Distribution", x="LoanAmount", y="Count")
+
+# Credit History distribution
+ggplot(training_dataset, aes(x = Credit_History)) + 
+  geom_histogram(binwidth = 10, fill="lightgoldenrod", color="black") + 
+  labs(title="Credit History Distribution", x="Credit History", y="Count")
+```
+
+***
+
+##### In this step, we aim to convert all categorical variable columns into dummy varibales using 'One-Hot-Encoding'
+
+```{r}
+# CONVERTING CATEGORICAL VARIABLES TO NUMERIC BY ONE-HOT ENCODING:
+library(caret)
+head(training_dataset)
+dummy_gender <- dummyVars(~Gender, data=training_dataset)
+dummy_Married <- dummyVars(~Married, data=training_dataset)
+dummy_Education <- dummyVars(~Education, data=training_dataset)
+dummy_Self_Employed <- dummyVars(~Self_Employed, data=training_dataset)
+dummy_Property_Area <- dummyVars(~Property_Area, data=training_dataset)
+dummy_Loan_Status<- dummyVars(~Loan_Status, data=training_dataset)
+dummy_Dependents<- dummyVars(~Dependents, data=training_dataset)
+encoded_training_dataset <- cbind(training_dataset,
+                                  predict(dummy_gender,training_dataset),
+                                  predict(dummy_Married,training_dataset),
+                                  predict(dummy_Education,training_dataset),
+                                  predict(dummy_Self_Employed,training_dataset),
+                                  predict(dummy_Property_Area,training_dataset),
+                                  predict(dummy_Loan_Status,training_dataset),
+                                  predict(dummy_Dependents,training_dataset))
+head(encoded_training_dataset)
+```
+
+***
+
+##### remove the converted columns
+
+```{r}
+encoded_training_dataset <- encoded_training_dataset[, -c(1,2,3,4,5,6,12,13)]
+head(encoded_training_dataset)
+```
+
+***
+
+##### Normalizing the entire dataset using preProcess function to bring all the variables to a common scale, for unbiased analysis.
+
+```{r}
+# NORMALIZING THE DATA:
+summary(encoded_training_dataset)
+encoded_training_dataset_norm <- preProcess(encoded_training_dataset,method = c('range'))
+normalized_training_dataset <- predict(encoded_training_dataset_norm,encoded_training_dataset)
+head(normalized_training_dataset)
+summary(normalized_training_dataset)
+```
+
+***
+
+##### Now, we are moving to the variable selection process. The idea is to use Corrplot, Backward Stepwise Regression, and PCA to perform variable selection.
+
+```{r}
+# FEATURE SELECTION (VARIABLE SELECTION)
+# 1. Corrplot:
+library(corrplot)
+cor_matrix <- cor(normalized_training_dataset[,sapply(normalized_training_dataset,is.numeric)],use = "complete.obs")
+corrplot(cor_matrix, method = "circle",tl.cex=0.7)
+```
+
+***
+
+##### Performed PCA for all variables to filter out the important variables for our analysis.
+
+```{r}
+# 2. PCA FOR ALL VARIABLES:
+library(FactoMineR)
+PCA(normalized_training_dataset)
+```
+
+***
+
+##### Combining Loan Status - Yes or No into one single column
+
+```{r}
+normalized_training_dataset$Loan_Status<- ifelse(normalized_training_dataset$Loan_StatusN == 1, 0, 1) 
+# Drop the original Loan Status columns:
+normalized_training_dataset <-normalized_training_dataset[, -c(20,21)]
+# Checking names of columns to ensure changes have been made:
+colnames(normalized_training_dataset)
+head(normalized_training_dataset)
+```
+
+***
+
+##### Performed Backward Stepwise regression to identify the most significant input variables.
+
+```{r}
+# 3. Stepwise Regression:
+# Load necessary library
+library(MASS) 
+
+# Fit initial linear regression model with all predictors
+initial_model <- lm(Loan_Status ~ ., data = normalized_training_dataset)
+
+# Perform backward elimination for variable selection
+final_model <- step(initial_model, direction = "backward")
+
+# Print the final model
+summary(final_model)
+```
+
+***
+
+##### From all the above feature selection methods and based on the business use cases, we can conclude that all methods pointed towards - Applicant Income, Credit History, MarriedYes,MarriedNo_,Education - Graduate, Education - Not Graduate, Self employed - Yes, Self employed No, are the variables that are significant for our analysis.
+
+
+```{r}
+# DROPPING UNWANTED VARIABLES [COLUMNS]
+library(class)
+head(normalized_training_dataset)
+normalized_class_training_dataset <-normalized_training_dataset[, -c(2,3,4,6,7,8,9,14,17,18,19,20,21,22,23,24)] # Removing Variables and Columns that were not significant enough and choosing only variables required for proceeding with our analysis.
+head(normalized_class_training_dataset)
+```
+
+***
+
+##### In the following section, visual representations such as PCA,and Pair Matrix have been used to depict the selected variables. 
+
+```{r}
+# SELECTED VARIABLE PLOTS:
+
+# 1. PCA FOR SELECTED VARIABLES:
+head(normalized_class_training_dataset)
+library(FactoMineR)
+PCA(normalized_class_training_dataset)
+```
+
+***
+
+```{r}
+# 2. Pair Matrix for selected variables:
+library(psych)
+pairs.panels(normalized_class_training_dataset[1:9],gap=0,bg=c("red","yellow","blue")[normalized_class_training_dataset$Loan_Status],pch=21)
+```
+
+***
+
+##### Performing hyper-parameter tuning using Grid Search method to determine the best 'k' value.
+
+```{r}
+library(caret)
+# Determining optimum 'k' value:
+# 1. Tuning 'k':
+colnames(normalized_class_training_dataset)
+model <- train(Loan_Status~`ApplicantIncome`+`Credit_History`+`MarriedNo`+`MarriedYes`+`EducationGraduate`+`EducationNot Graduate`+`Self_EmployedNo`+`Self_EmployedYes`, data=normalized_class_training_dataset, method="knn")
+model
+```
+
+***
+
+```{r}
+# Testing:
+colnames(Testing_dataset)
+```
+
+***
+
+##### from the above testing dataset, we must remove the insignificant variables, so we are left only with the relevant variables for our analysis.
+```{r}
+Testing_dataset <- Testing_dataset[, -c(1,2,4,8,9,10,12)]
+head(Testing_dataset)
+```
+
+***
+
+```{r}
+# CONVERTING CATEGORICAL VARIABLES TO NUMERIC BY ONE-HOT ENCODING IN TESTING DATASET:
+library(caret)
+head(Testing_dataset)
+dummy_Married_Test <- dummyVars(~Married, data=Testing_dataset)
+dummy_Education_Test <- dummyVars(~Education, data=Testing_dataset)
+dummy_Self_Employed_Test <- dummyVars(~Self_Employed, data=Testing_dataset)
+encoded_Testing_dataset <- cbind(Testing_dataset,
+                          
+                                  predict(dummy_Married_Test,Testing_dataset),
+                                  predict(dummy_Education_Test,Testing_dataset),
+                                  predict(dummy_Self_Employed_Test,Testing_dataset))
+head(encoded_Testing_dataset)
+```
+
+***
+
+```{r}
+# REMOVE ENCODED COLUMNS:
+encoded_Testing_dataset <- encoded_Testing_dataset[, -c(1,2,3)]
+head(encoded_Testing_dataset)
+```
+
+***
+
+```{r}
+# NORMALIZE THE TESTING SET:
+summary(encoded_Testing_dataset)
+encoded_Testing_dataset_norm <- preProcess(encoded_Testing_dataset,method = c('range'))
+normalized_Testing_dataset <- predict(encoded_Testing_dataset_norm,encoded_Testing_dataset)
+head(normalized_Testing_dataset)
+summary(normalized_Testing_dataset)
+```
+
+***
+
+##### Performing K-NN for K values - k=5,7,9
+
+```{r}
+# Set CRAN mirror
+options(repos = c(CRAN = "https://cran.rstudio.com"))
+
+# Install necessary packages
+install.packages("readxl", dependencies = TRUE)
+install.packages("class", dependencies = TRUE)
+install.packages("e1071", dependencies = TRUE)
+install.packages("caret", dependencies = TRUE)
+install.packages("ggplot2", dependencies = TRUE)
+install.packages("reshape2", dependencies = TRUE)
+install.packages("pROC", dependencies = TRUE)
+
+
+# Load necessary libraries
+library(readxl)
+library(class)
+library(e1071)
+library(caret)
+library(ggplot2)
+library(reshape2)
+library(pROC)
+
+train_set <- normalized_class_training_dataset
+test_set <- normalized_Testing_dataset
+test_set <- test_set[,-7]
+head(train_set)
+head(test_set)
+test_set <- na.omit(test_set)
+# Separate features and target variable in the training data
+train_features <- train_set[, -which(names(train_set) == "Loan_Status")]
+train_target <- train_set$Loan_Status
+# Features in the testing data
+test_features <- test_set
+```
+
+***
+
+```{r}
+# Model's Performance when k=5
+knn_predictions_k5 <- knn(train = train_features, test = test_features, cl = train_target, k = 5)
+knn_predictions_k5
+```
+
+***
+
+```{r}
+# Model's Performance when k=7
+knn_predictions_k7 <- knn(train = train_features, test = test_features, cl = train_target, k = 7)
+knn_predictions_k7
+```
+
+***
+
+```{r}
+# Model's Performance when k=9
+knn_predictions_k9 <- knn(train = train_features, test = test_features, cl = train_target, k = 9)
+knn_predictions_k9
+```
+
+***
+
+##### Using Confusion Matrix to compare all potential k values,i.e k= 5,7 & 9. Based on these metrics, k = 9 seems to be the best choice.
+
+```{r}
+# Create a validation set from the training data since the testing dataset does not have a target variable:
+set.seed(123)
+trainIndex <- createDataPartition(train_target, p = .8, 
+                                  list = FALSE, 
+                                  times = 1)
+train_set_train <- train_set[trainIndex,]
+train_set_val <- train_set[-trainIndex,]
+```
+
+***
+
+```{r}
+# Separate features and target variable in the validation data
+val_features <- train_set_val[, -which(names(train_set_val) == "Loan_Status")]
+val_target <- train_set_val$Loan_Status
+```
+
+***
+
+```{r}
+# Function to train and evaluate k-NN for a given k
+evaluate_knn <- function(k) {
+  knn_val_predictions <- knn(train = train_set_train[, -which(names(train_set_train) == "Loan_Status")], 
+                             test = val_features, 
+                             cl = train_set_train$Loan_Status, 
+                             k = k)
+  
+  # Convert predictions and actual values to factors with the same levels
+  val_target <- factor(val_target) # Ensure val_target is a factor
+  knn_val_predictions <- factor(knn_val_predictions, levels = levels(val_target))
+  
+  # Confusion matrix for k-NN
+  knn_conf_matrix <- confusionMatrix(knn_val_predictions, val_target)
+  return(knn_conf_matrix)
+}
+
+# Evaluate k-NN for k=5, k=7, and k=9
+knn_conf_matrix_k5 <- evaluate_knn(5)
+knn_conf_matrix_k7 <- evaluate_knn(7)
+knn_conf_matrix_k9 <- evaluate_knn(9)
+
+# Print the confusion matrices
+print(knn_conf_matrix_k5)
+print(knn_conf_matrix_k7)
+print(knn_conf_matrix_k9)
+```
+
+***
+
+```{r}
+# Confusion Matrix for k=5,7,9
+plot_confusion_matrix <- function(cm, title) {
+  cm_matrix <- as.data.frame(cm$table)
+  colnames(cm_matrix) <- c("Prediction", "Reference", "Count")
+  
+  ggplot(data = cm_matrix, aes(x = Reference, y = Prediction)) +
+    geom_tile(aes(fill = Count), color = "white") +
+    geom_text(aes(label = Count), vjust = 1) +
+    scale_fill_gradient(low = "white", high = "steelblue") +
+    theme_minimal() +
+    labs(title = title, x = "Actual", y = "Predicted")
+}
+
+# Plot confusion matrices for k=5, k=7, and k=9
+plot_confusion_matrix(knn_conf_matrix_k5, "Confusion Matrix for k-NN (k=5)")
+plot_confusion_matrix(knn_conf_matrix_k7, "Confusion Matrix for k-NN (k=7)")
+plot_confusion_matrix(knn_conf_matrix_k9, "Confusion Matrix for k-NN (k=9)")
+```
+
+***
+
+##### Performing Naive Bayes Classification Algorithm to predict the outcome:
+
+```{r}
+# Train the Naive Bayes model
+nb_model <- naiveBayes(Loan_Status ~ ., data = train_set_train)
+
+# Make predictions on the validation data
+nb_val_predictions <- predict(nb_model, val_features)
+
+# Convert predictions and actual values to factors with the same levels
+val_target <- factor(val_target) # Ensure val_target is a factor
+nb_val_predictions <- factor(nb_val_predictions, levels = levels(val_target))
+
+# Confusion matrix for Naive Bayes
+nb_conf_matrix <- confusionMatrix(nb_val_predictions, val_target)
+print(nb_conf_matrix)
+
+# Plot Naive Bayes confusion matrix
+plot_confusion_matrix(nb_conf_matrix, "Confusion Matrix for Naive Bayes")
+```
+
+***
+
+##### Calculating the performance metrics for both K-NN & Naive Bayes Algorithms:
+
+```{r}
+# performance metrics from confusion matrix
+calculate_metrics <- function(cm) {
+  accuracy <- cm$overall['Accuracy']
+  recall <- cm$byClass['Sensitivity']
+  precision <- cm$byClass['Pos Pred Value']
+  specificity <- cm$byClass['Specificity']
+  
+  return(data.frame(Accuracy = accuracy, Recall = recall, Precision = precision, Specificity = specificity))
+}
+
+# Calculate metrics for k-NN with k=5, k=7, and k=9
+metrics_k5 <- calculate_metrics(knn_conf_matrix_k5)
+metrics_k7 <- calculate_metrics(knn_conf_matrix_k7)
+metrics_k9 <- calculate_metrics(knn_conf_matrix_k9)
+
+# Calculate metrics for Naive Bayes
+metrics_nb <- calculate_metrics(nb_conf_matrix)
+
+# Print metrics
+print(metrics_k5)
+print(metrics_k7)
+print(metrics_k9)
+print(metrics_nb)
+```
+
+***
+
+##### Combine metrics into a single data frame for comparison
+
+```{r}
+all_metrics <- rbind(
+  data.frame(Model = "k-NN (k=5)", metrics_k5),
+  data.frame(Model = "k-NN (k=7)", metrics_k7),
+  data.frame(Model = "k-NN (k=9)", metrics_k9),
+  data.frame(Model = "Naive Bayes", metrics_nb)
+)
+print(all_metrics)
+```
+
